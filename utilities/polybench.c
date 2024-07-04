@@ -333,7 +333,6 @@ void polybench_papi_print()
 	int evid;
 	for (evid = 0; polybench_papi_eventlist[evid] != 0; ++evid)
 	  {
-	    if (verbose)
 	      printf ("%s=", _polybench_papi_eventlist[evid]);
 	    printf ("%llu ", polybench_papi_values[evid]);
 	    if (verbose)
