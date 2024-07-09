@@ -78,6 +78,45 @@ static size_t polybench_inter_array_padding_sz = 0;
 double polybench_t_start, polybench_t_end;
 /* Timer code (RDTSC). */
 unsigned long long int polybench_c_start, polybench_c_end;
+/* Energy counters */
+long long polybench_e_start, polybench_e_end;
+
+static 
+long long get_energy() {
+#if defined(POLYBENCH_ENERGY)
+    struct timeval Tp;
+    int stat;
+    stat = gettimeofday (&Tp, NULL);
+    if (stat != 0)
+      printf ("Error return from gettimeofday: %d", stat);
+    return (Tp.tv_sec + Tp.tv_usec * 1.0e-6);
+  FILE *fp;
+  char path[1035];
+  long long value;
+
+  /* Open the command for reading. */
+  fp =
+      popen("rdmsr -d 1553 | xargs -0 -I{} echo {}", "r");
+  if (fp == NULL) {
+    fprintf(stderr, "Failed to run command\n");
+    exit(1);
+  }
+
+  /* Read the output a line at a time - it should be just one line. */
+  if (fgets(path, sizeof(path) - 1, fp) != NULL) {
+    fprintf(stderr, "Output: %s", path);
+    value = atoll(path); // Convert the output to an integer
+  }
+
+  /* Close the pipe and print the value. */
+  pclose(fp);
+  // fprintf(stderr, "Value: %lld\n", value);
+
+  return value;
+#else
+    return 0;
+#endif
+}
 
 static
 double rtclock()
@@ -371,6 +410,12 @@ void polybench_timer_start()
 #endif
 }
 
+void polybench_energy_start()
+{
+  polybench_prepare_instruments ();
+  polybench_e_start = get_energy();
+}
+
 
 void polybench_timer_stop()
 {
@@ -379,6 +424,14 @@ void polybench_timer_stop()
 #else
   polybench_c_end = rdtsc ();
 #endif
+#ifdef POLYBENCH_LINUX_FIFO_SCHEDULER
+  polybench_linux_standard_scheduler ();
+#endif
+}
+
+void polybench_energy_stop()
+{
+  polybench_e_end = get_energy();
 #ifdef POLYBENCH_LINUX_FIFO_SCHEDULER
   polybench_linux_standard_scheduler ();
 #endif
@@ -404,6 +457,11 @@ void polybench_timer_print()
       printf ("%Ld\n", polybench_c_end - polybench_c_start);
 # endif
 #endif
+}
+
+void polybench_energy_print()
+{
+  printf("%lld\n", polybench_e_end - polybench_e_start);
 }
 
 /*

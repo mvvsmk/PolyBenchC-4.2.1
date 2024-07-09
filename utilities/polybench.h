@@ -218,6 +218,19 @@ extern void polybench_timer_stop();
 extern void polybench_timer_print();
 # endif
 
+/* Energy support. */
+# if defined(POLYBENCH_ENERGY)
+#  undef polybench_start_instruments
+#  undef polybench_stop_instruments
+#  undef polybench_print_instruments
+#  define polybench_start_instruments polybench_energy_start();
+#  define polybench_stop_instruments polybench_energy_stop();
+#  define polybench_print_instruments polybench_energy_print();
+extern void polybench_energy_start();
+extern void polybench_energy_stop();
+extern void polybench_energy_print();
+# endif
+
 /* PAPI support. */
 # ifdef POLYBENCH_PAPI
 extern int polybench_papi_start_counter(int evid);
