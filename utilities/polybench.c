@@ -84,12 +84,6 @@ long long polybench_e_start, polybench_e_end;
 static 
 long long get_energy() {
 #if defined(POLYBENCH_ENERGY)
-    struct timeval Tp;
-    int stat;
-    stat = gettimeofday (&Tp, NULL);
-    if (stat != 0)
-      printf ("Error return from gettimeofday: %d", stat);
-    return (Tp.tv_sec + Tp.tv_usec * 1.0e-6);
   FILE *fp;
   char path[1035];
   long long value;
@@ -104,7 +98,7 @@ long long get_energy() {
 
   /* Read the output a line at a time - it should be just one line. */
   if (fgets(path, sizeof(path) - 1, fp) != NULL) {
-    fprintf(stderr, "Output: %s", path);
+    // fprintf(stderr, "Output: %s", path);
     value = atoll(path); // Convert the output to an integer
   }
 
