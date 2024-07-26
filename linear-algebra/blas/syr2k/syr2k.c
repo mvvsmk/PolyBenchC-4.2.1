@@ -122,6 +122,7 @@ int main(int argc, char** argv)
   polybench_start_instruments;
 
   /* Run kernel. */
+  _mm_mfence();
   kernel_syr2k (n, m,
 		alpha, beta,
 		POLYBENCH_ARRAY(C),

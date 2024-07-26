@@ -114,6 +114,7 @@ int main(int argc, char** argv)
   polybench_start_instruments;
 
   /* Run kernel. */
+  _mm_mfence();
   kernel_heat_3d (tsteps, n, POLYBENCH_ARRAY(A), POLYBENCH_ARRAY(B));
 
   /* Stop and print timer. */

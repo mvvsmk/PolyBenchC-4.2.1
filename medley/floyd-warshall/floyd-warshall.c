@@ -95,6 +95,7 @@ int main(int argc, char** argv)
   polybench_start_instruments;
 
   /* Run kernel. */
+  _mm_mfence();
   kernel_floyd_warshall (n, POLYBENCH_ARRAY(path));
 
   /* Stop and print timer. */

@@ -116,6 +116,7 @@ int main(int argc, char** argv)
   polybench_start_instruments;
 
   /* Run kernel. */
+  _mm_mfence();
   kernel_covariance (m, n, float_n,
 		     POLYBENCH_ARRAY(data),
 		     POLYBENCH_ARRAY(cov),

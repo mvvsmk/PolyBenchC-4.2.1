@@ -148,6 +148,7 @@ int main(int argc, char** argv)
   polybench_start_instruments;
 
   /* Run kernel. */
+  _mm_mfence();
   kernel_adi (tsteps, n, POLYBENCH_ARRAY(u), POLYBENCH_ARRAY(v), POLYBENCH_ARRAY(p), POLYBENCH_ARRAY(q));
 
   /* Stop and print timer. */

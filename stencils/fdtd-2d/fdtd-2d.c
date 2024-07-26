@@ -143,6 +143,7 @@ int main(int argc, char** argv)
   polybench_start_instruments;
 
   /* Run kernel. */
+  _mm_mfence();
   kernel_fdtd_2d (tmax, nx, ny,
 		  POLYBENCH_ARRAY(ex),
 		  POLYBENCH_ARRAY(ey),

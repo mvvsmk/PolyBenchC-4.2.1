@@ -133,6 +133,7 @@ int main(int argc, char** argv)
   polybench_start_instruments;
 
   /* Run kernel. */
+  _mm_mfence();
   kernel_2mm (ni, nj, nk, nl,
 	      alpha, beta,
 	      POLYBENCH_ARRAY(tmp),
