@@ -42,6 +42,30 @@
 #   define N 200
 #  endif
 
+#  ifdef XL1_1
+#   define TSTEPS 1100
+#   define N 220
+#  endif
+
+#  ifdef XL1_2
+#   define TSTEPS 1200
+#   define N 240
+#  endif
+
+#  ifdef XL1_3
+#   define TSTEPS 1300
+#   define N 260
+#  endif
+
+#  ifdef XL1_5
+#   define TSTEPS 1500
+#   define N 300
+#  endif
+
+#  ifdef DOUBLE_XL
+#   define TSTEPS 2000
+#   define N 400
+#  endif
 
 #endif /* !(TSTEPS N) */
 
