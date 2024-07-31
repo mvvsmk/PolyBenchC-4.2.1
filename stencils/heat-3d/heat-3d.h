@@ -11,7 +11,7 @@
 # define _HEAT_3D_H
 
 /* Default to LARGE_DATASET. */
-# if !defined(MINI_DATASET) && !defined(SMALL_DATASET) && !defined(MEDIUM_DATASET) && !defined(LARGE_DATASET) && !defined(EXTRALARGE_DATASET)
+# if !defined(MINI_DATASET) && !defined(SMALL_DATASET) && !defined(MEDIUM_DATASET) && !defined(LARGE_DATASET) && !defined(EXTRALARGE_DATASET) && !defined(XL1_1) && !defined(XL1_2) && !defined(XL1_3) && !defined(XL1_5) && !defined(DOUBLE_XL)
 #  define LARGE_DATASET
 # endif
 

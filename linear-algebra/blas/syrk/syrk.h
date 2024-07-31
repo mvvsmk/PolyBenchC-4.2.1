@@ -11,7 +11,7 @@
 # define _SYRK_H
 
 /* Default to LARGE_DATASET. */
-# if !defined(MINI_DATASET) && !defined(SMALL_DATASET) && !defined(MEDIUM_DATASET) && !defined(LARGE_DATASET) && !defined(EXTRALARGE_DATASET)
+# if !defined(MINI_DATASET) && !defined(SMALL_DATASET) && !defined(MEDIUM_DATASET) && !defined(LARGE_DATASET) && !defined(EXTRALARGE_DATASET) && !defined(XL1_1) && !defined(XL1_2) && !defined(XL1_3) && !defined(XL1_5) && !defined(DOUBLE_XL)
 #  define LARGE_DATASET
 # endif
 
@@ -42,6 +42,30 @@
 #   define N 2600
 #  endif
 
+#  ifdef XL1_1
+#   define M 2200
+#   define N 2860
+#  endif
+
+#  ifdef XL1_2
+#   define M 2400
+#   define N 3120
+#  endif
+
+#  ifdef XL1_3
+#   define M 2600
+#   define N 3380
+#  endif
+
+#  ifdef XL1_5
+#   define M 3000
+#   define N 3900
+#  endif
+
+#  ifdef DOUBLE_XL
+#   define M 4000
+#   define N 5200
+#  endif
 
 #endif /* !(M N) */
 

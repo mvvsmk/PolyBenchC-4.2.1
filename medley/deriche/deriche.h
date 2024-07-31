@@ -11,7 +11,7 @@
 # define _DERICHE_H
 
 /* Default to LARGE_DATASET. */
-# if !defined(MINI_DATASET) && !defined(SMALL_DATASET) && !defined(MEDIUM_DATASET) && !defined(LARGE_DATASET) && !defined(EXTRALARGE_DATASET)
+# if !defined(MINI_DATASET) && !defined(SMALL_DATASET) && !defined(MEDIUM_DATASET) && !defined(LARGE_DATASET) && !defined(EXTRALARGE_DATASET) && !defined(XL1_1) && !defined(XL1_2) && !defined(XL1_3) && !defined(XL1_5) && !defined(DOUBLE_XL)
 #  define LARGE_DATASET
 # endif
 
@@ -42,6 +42,30 @@
 #   define H 4320
 #  endif
 
+#  ifdef XL1_1
+#   define W 8448
+#   define H 4752
+#  endif
+
+#  ifdef XL1_2
+#   define W 9216
+#   define H 5184
+#  endif
+
+#  ifdef XL1_3
+#   define W 9984
+#   define H 5616
+#  endif
+
+#  ifdef XL1_5
+#   define W 11520
+#   define H 6480
+#  endif
+
+#  ifdef DOUBLE_XL
+#   define W 15360
+#   define H 8640
+#  endif
 
 #endif /* !(W H) */
 

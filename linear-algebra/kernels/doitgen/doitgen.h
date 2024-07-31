@@ -11,7 +11,7 @@
 # define _DOITGEN_H
 
 /* Default to LARGE_DATASET. */
-# if !defined(MINI_DATASET) && !defined(SMALL_DATASET) && !defined(MEDIUM_DATASET) && !defined(LARGE_DATASET) && !defined(EXTRALARGE_DATASET)
+# if !defined(MINI_DATASET) && !defined(SMALL_DATASET) && !defined(MEDIUM_DATASET) && !defined(LARGE_DATASET) && !defined(EXTRALARGE_DATASET) && !defined(XL1_1) && !defined(XL1_2) && !defined(XL1_3) && !defined(XL1_5) && !defined(DOUBLE_XL)
 #  define LARGE_DATASET
 # endif
 
@@ -47,6 +47,35 @@
 #   define NP 270
 #  endif
 
+#  ifdef XL1_1
+#   define NQ 242
+#   define NR 275
+#   define NP 297
+#  endif
+
+#  ifdef XL1_2
+#   define NQ 264
+#   define NR 300
+#   define NP 324
+#  endif
+
+#  ifdef XL1_3
+#   define NQ 286
+#   define NR 325
+#   define NP 351
+#  endif
+
+#  ifdef XL1_5
+#   define NQ 330
+#   define NR 375
+#   define NP 405
+#  endif
+
+#  ifdef DOUBLE_XL
+#   define NQ 440
+#   define NR 500
+#   define NP 540
+#  endif
 
 #endif /* !(NQ NR NP) */
 

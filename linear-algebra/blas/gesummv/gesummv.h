@@ -11,7 +11,7 @@
 # define _GESUMMV_H
 
 /* Default to LARGE_DATASET. */
-# if !defined(MINI_DATASET) && !defined(SMALL_DATASET) && !defined(MEDIUM_DATASET) && !defined(LARGE_DATASET) && !defined(EXTRALARGE_DATASET)
+# if !defined(MINI_DATASET) && !defined(SMALL_DATASET) && !defined(MEDIUM_DATASET) && !defined(LARGE_DATASET) && !defined(EXTRALARGE_DATASET) && !defined(XL1_1) && !defined(XL1_2) && !defined(XL1_3) && !defined(XL1_5) && !defined(DOUBLE_XL)
 #  define LARGE_DATASET
 # endif
 
@@ -37,6 +37,26 @@
 #   define N 2800
 #  endif
 
+
+#  ifdef XL1_1
+#   define N 3080
+#  endif
+
+#  ifdef XL1_2
+#   define N 3360
+#  endif
+
+#  ifdef XL1_3
+#   define N 3640
+#  endif
+
+#  ifdef XL1_5
+#   define N 4200
+#  endif
+
+#  ifdef DOUBLE_XL
+#   define N 5600
+#  endif
 
 #endif /* !(N) */
 

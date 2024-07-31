@@ -11,7 +11,7 @@
 # define _GEMM_H
 
 /* Default to LARGE_DATASET. */
-# if !defined(MINI_DATASET) && !defined(SMALL_DATASET) && !defined(MEDIUM_DATASET) && !defined(LARGE_DATASET) && !defined(EXTRALARGE_DATASET)
+# if !defined(MINI_DATASET) && !defined(SMALL_DATASET) && !defined(MEDIUM_DATASET) && !defined(LARGE_DATASET) && !defined(EXTRALARGE_DATASET) && !defined(XL1_1) && !defined(XL1_2) && !defined(XL1_3) && !defined(XL1_5) && !defined(DOUBLE_XL)
 #  define LARGE_DATASET
 # endif
 
@@ -47,6 +47,35 @@
 #   define NK 2600
 #  endif
 
+#  ifdef XL1_1
+#   define NI 2200
+#   define NJ 2530
+#   define NK 2860
+#  endif
+
+#  ifdef XL1_2
+#   define NI 2400
+#   define NJ 2760
+#   define NK 3120
+#  endif
+
+#  ifdef XL1_3
+#   define NI 2600
+#   define NJ 2990
+#   define NK 3380
+#  endif
+
+#  ifdef XL1_5
+#   define NI 3000
+#   define NJ 3450
+#   define NK 3900
+#  endif
+
+#  ifdef DOUBLE_XL
+#   define NI 4000
+#   define NJ 4600
+#   define NK 5200
+#  endif
 
 #endif /* !(NI NJ NK) */
 
