@@ -78,6 +78,39 @@ static size_t polybench_inter_array_padding_sz = 0;
 double polybench_t_start, polybench_t_end;
 /* Timer code (RDTSC). */
 unsigned long long int polybench_c_start, polybench_c_end;
+/* Energy counters */
+long long polybench_e_start, polybench_e_end;
+
+static 
+long long get_energy() {
+#if defined(POLYBENCH_TIME) || defined(POLYBENCH_GFLOPS)
+  FILE *fp;
+  char path[1035];
+  long long value;
+
+  /* Open the command for reading. */
+  fp =
+      popen("rdmsr -d 1553 | xargs -0 -I{} echo {}", "r");
+  if (fp == NULL) {
+    fprintf(stderr, "Failed to run command\n");
+    exit(1);
+  }
+
+  /* Read the output a line at a time - it should be just one line. */
+  if (fgets(path, sizeof(path) - 1, fp) != NULL) {
+    // fprintf(stderr, "Output: %s", path);
+    value = atoll(path); // Convert the output to an integer
+  }
+
+  /* Close the pipe and print the value. */
+  pclose(fp);
+  // fprintf(stderr, "Value: %lld\n", value);
+
+  return value;
+#else
+    return 0;
+#endif
+}
 
 static
 double rtclock()
@@ -365,10 +398,17 @@ void polybench_timer_start()
 {
   polybench_prepare_instruments ();
 #ifndef POLYBENCH_CYCLE_ACCURATE_TIMER
+  polybench_e_start = get_energy();
   polybench_t_start = rtclock ();
 #else
   polybench_c_start = rdtsc ();
 #endif
+}
+
+void polybench_energy_start()
+{
+  polybench_prepare_instruments ();
+  polybench_e_start = get_energy();
 }
 
 
@@ -376,9 +416,18 @@ void polybench_timer_stop()
 {
 #ifndef POLYBENCH_CYCLE_ACCURATE_TIMER
   polybench_t_end = rtclock ();
+  polybench_e_end = get_energy();
 #else
   polybench_c_end = rdtsc ();
 #endif
+#ifdef POLYBENCH_LINUX_FIFO_SCHEDULER
+  polybench_linux_standard_scheduler ();
+#endif
+}
+
+void polybench_energy_stop()
+{
+  polybench_e_end = get_energy();
 #ifdef POLYBENCH_LINUX_FIFO_SCHEDULER
   polybench_linux_standard_scheduler ();
 #endif
@@ -400,6 +449,8 @@ void polybench_timer_print()
 #else
 # ifndef POLYBENCH_CYCLE_ACCURATE_TIMER
       printf ("%0.6f\n", polybench_t_end - polybench_t_start);
+      printf("%lld\n", polybench_e_start);
+      printf("%lld\n", polybench_e_end);
 # else
       printf ("%Ld\n", polybench_c_end - polybench_c_start);
 # endif
