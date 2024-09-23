@@ -1,3 +1,10 @@
+#include <omp.h>
+#include <math.h>
+#define ceild(n,d)  (((n)<0) ? -((-(n))/(d)) : ((n)+(d)-1)/(d))
+#define floord(n,d) (((n)<0) ? -((-(n)+(d)-1)/(d)) : (n)/(d))
+#define max(x,y)    ((x) > (y)? (x) : (y))
+#define min(x,y)    ((x) < (y)? (x) : (y))
+
 /**
  * This version is stamped on May 10, 2016
  *
@@ -96,24 +103,55 @@ void kernel_gemver(int n,
 {
   int i, j;
 
-#pragma scop
-
-  for (i = 0; i < _PB_N; i++)
-    for (j = 0; j < _PB_N; j++)
-      A[i][j] = A[i][j] + u1[i] * v1[j] + u2[i] * v2[j];
-
-  for (i = 0; i < _PB_N; i++)
-    for (j = 0; j < _PB_N; j++)
-      x[i] = x[i] + beta * A[j][i] * y[j];
-
-  for (i = 0; i < _PB_N; i++)
-    x[i] = x[i] + z[i];
-
-  for (i = 0; i < _PB_N; i++)
-    for (j = 0; j < _PB_N; j++)
-      w[i] = w[i] +  alpha * A[i][j] * x[j];
-
-#pragma endscop
+  int t1, t2, t3, t4, t5;
+ int lb, ub, lbp, ubp, lb2, ub2;
+ register int lbv, ubv;
+if (_PB_N >= 1) {
+  lbp=0;
+  ubp=floord(_PB_N-1,32);
+#pragma omp parallel for private(lbv,ubv,t3,t4,t5)
+  for (t2=lbp;t2<=ubp;t2++) {
+    for (t3=0;t3<=floord(_PB_N-1,32);t3++) {
+      for (t4=32*t2;t4<=min(_PB_N-1,32*t2+31);t4++) {
+        for (t5=32*t3;t5<=min(_PB_N-1,32*t3+31);t5++) {
+          A[t4][t5] = A[t4][t5] + u1[t4] * v1[t5] + u2[t4] * v2[t5];;
+        }
+      }
+    }
+  }
+  lbp=0;
+  ubp=floord(_PB_N-1,32);
+#pragma omp parallel for private(lbv,ubv,t3,t4,t5)
+  for (t2=lbp;t2<=ubp;t2++) {
+    for (t3=0;t3<=floord(_PB_N-1,32);t3++) {
+      for (t4=32*t2;t4<=min(_PB_N-1,32*t2+31);t4++) {
+        for (t5=32*t3;t5<=min(_PB_N-1,32*t3+31);t5++) {
+          x[t4] = x[t4] + beta * A[t5][t4] * y[t5];;
+        }
+      }
+    }
+  }
+  lbp=0;
+  ubp=floord(_PB_N-1,32);
+#pragma omp parallel for private(lbv,ubv,t3,t4,t5)
+  for (t2=lbp;t2<=ubp;t2++) {
+    for (t3=32*t2;t3<=min(_PB_N-1,32*t2+31);t3++) {
+      x[t3] = x[t3] + z[t3];;
+    }
+  }
+  lbp=0;
+  ubp=floord(_PB_N-1,32);
+#pragma omp parallel for private(lbv,ubv,t3,t4,t5)
+  for (t2=lbp;t2<=ubp;t2++) {
+    for (t3=0;t3<=floord(_PB_N-1,32);t3++) {
+      for (t4=32*t2;t4<=min(_PB_N-1,32*t2+31);t4++) {
+        for (t5=32*t3;t5<=min(_PB_N-1,32*t3+31);t5++) {
+          w[t4] = w[t4] + alpha * A[t4][t5] * x[t5];;
+        }
+      }
+    }
+  }
+}
 }
 
 

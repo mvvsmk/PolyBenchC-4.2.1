@@ -1,3 +1,10 @@
+#include <omp.h>
+#include <math.h>
+#define ceild(n,d)  (((n)<0) ? -((-(n))/(d)) : ((n)+(d)-1)/(d))
+#define floord(n,d) (((n)<0) ? -((-(n)+(d)-1)/(d)) : (n)/(d))
+#define max(x,y)    ((x) > (y)? (x) : (y))
+#define min(x,y)    ((x) < (y)? (x) : (y))
+
 /**
  * This version is stamped on May 10, 2016
  *
@@ -82,29 +89,51 @@ void kernel_nussinov(int n, base POLYBENCH_1D(seq,N,n),
 {
   int i, j, k;
 
-#pragma scop
- for (i = _PB_N-1; i >= 0; i--) {
-  for (j=i+1; j<_PB_N; j++) {
-
-   if (j-1>=0)
-      table[i][j] = max_score(table[i][j], table[i][j-1]);
-   if (i+1<_PB_N)
-      table[i][j] = max_score(table[i][j], table[i+1][j]);
-
-   if (j-1>=0 && i+1<_PB_N) {
-     /* don't allow adjacent elements to bond */
-     if (i<j-1)
-        table[i][j] = max_score(table[i][j], table[i+1][j-1]+match(seq[i], seq[j]));
-     else
-        table[i][j] = max_score(table[i][j], table[i+1][j-1]);
-   }
-
-   for (k=i+1; k<j; k++) {
-      table[i][j] = max_score(table[i][j], table[i][k] + table[k+1][j]);
-   }
+  int t1, t2, t3, t4, t5, t6, t7, t8, t9, t10;
+ int lb, ub, lbp, ubp, lb2, ub2;
+ register int lbv, ubv;
+if (_PB_N >= 2) {
+  for (t2=ceild(-_PB_N-29,32);t2<=0;t2++) {
+    lbp=max(0,-t2-1);
+    ubp=floord(_PB_N-1,32);
+#pragma omp parallel for private(lbv,ubv,t5,t6,t7,t8,t9,t10)
+    for (t4=lbp;t4<=ubp;t4++) {
+      if ((t2 == -t4-1) && (t2 >= ceild(-_PB_N,32))) {
+        table[(-32*t2-2)][(-32*t2-1)] = max_score(table[(-32*t2-2)][(-32*t2-1)], table[(-32*t2-2)][(-32*t2-1)-1]);;
+        table[(-32*t2-2)][(-32*t2-1)] = max_score(table[(-32*t2-2)][(-32*t2-1)], table[(-32*t2-2)+1][(-32*t2-1)]);;
+        table[(-32*t2-2)][(-32*t2-1)] = max_score(table[(-32*t2-2)][(-32*t2-1)], table[(-32*t2-2)+1][(-32*t2-1)-1]);;
+      }
+      if ((t2 <= floord(-_PB_N+2,32)) && (t4 >= ceild(_PB_N-31,32))) {
+        table[(_PB_N-2)][(_PB_N-1)] = max_score(table[(_PB_N-2)][(_PB_N-1)], table[(_PB_N-2)][(_PB_N-1)-1]);;
+        table[(_PB_N-2)][(_PB_N-1)] = max_score(table[(_PB_N-2)][(_PB_N-1)], table[(_PB_N-2)+1][(_PB_N-1)]);;
+        table[(_PB_N-2)][(_PB_N-1)] = max_score(table[(_PB_N-2)][(_PB_N-1)], table[(_PB_N-2)+1][(_PB_N-1)-1]);;
+      }
+      for (t5=max(max(32*t2,-_PB_N+3),-32*t4-29);t5<=min(min(0,32*t2+31),-32*t4+1);t5++) {
+        table[-t5][(-t5+1)] = max_score(table[-t5][(-t5+1)], table[-t5][(-t5+1)-1]);;
+        table[-t5][(-t5+1)] = max_score(table[-t5][(-t5+1)], table[-t5+1][(-t5+1)]);;
+        table[-t5][(-t5+1)] = max_score(table[-t5][(-t5+1)], table[-t5+1][(-t5+1)-1]);;
+        for (t7=-t5+2;t7<=min(_PB_N-1,32*t4+31);t7++) {
+          table[-t5][t7] = max_score(table[-t5][t7], table[-t5][t7-1]);;
+          table[-t5][t7] = max_score(table[-t5][t7], table[-t5+1][t7]);;
+          table[-t5][t7] = max_score(table[-t5][t7], table[-t5+1][t7-1]+match(seq[-t5], seq[t7]));;
+          for (t9=-t5+1;t9<=t7-1;t9++) {
+            table[-t5][t7] = max_score(table[-t5][t7], table[-t5][t9] + table[t9+1][t7]);;
+          }
+        }
+      }
+      for (t5=max(32*t2,-32*t4+2);t5<=min(0,32*t2+31);t5++) {
+        for (t7=32*t4;t7<=min(_PB_N-1,32*t4+31);t7++) {
+          table[-t5][t7] = max_score(table[-t5][t7], table[-t5][t7-1]);;
+          table[-t5][t7] = max_score(table[-t5][t7], table[-t5+1][t7]);;
+          table[-t5][t7] = max_score(table[-t5][t7], table[-t5+1][t7-1]+match(seq[-t5], seq[t7]));;
+          for (t9=-t5+1;t9<=t7-1;t9++) {
+            table[-t5][t7] = max_score(table[-t5][t7], table[-t5][t9] + table[t9+1][t7]);;
+          }
+        }
+      }
+    }
   }
- }
-#pragma endscop
+}
 
 }
 

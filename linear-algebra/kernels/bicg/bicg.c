@@ -1,3 +1,10 @@
+#include <omp.h>
+#include <math.h>
+#define ceild(n,d)  (((n)<0) ? -((-(n))/(d)) : ((n)+(d)-1)/(d))
+#define floord(n,d) (((n)<0) ? -((-(n)+(d)-1)/(d)) : (n)/(d))
+#define max(x,y)    ((x) > (y)? (x) : (y))
+#define min(x,y)    ((x) < (y)? (x) : (y))
+
 /**
  * This version is stamped on May 10, 2016
  *
@@ -79,19 +86,53 @@ void kernel_bicg(int m, int n,
 {
   int i, j;
 
-#pragma scop
-  for (i = 0; i < _PB_M; i++)
-    s[i] = 0;
-  for (i = 0; i < _PB_N; i++)
-    {
-      q[i] = SCALAR_VAL(0.0);
-      for (j = 0; j < _PB_M; j++)
-	{
-	  s[j] = s[j] + r[i] * A[i][j];
-	  q[i] = q[i] + A[i][j] * p[j];
-	}
+  int t1, t2, t3, t4, t5;
+ int lb, ub, lbp, ubp, lb2, ub2;
+ register int lbv, ubv;
+lbp=0;
+ubp=floord(_PB_N-1,32);
+#pragma omp parallel for private(lbv,ubv,t3,t4,t5)
+for (t2=lbp;t2<=ubp;t2++) {
+  for (t3=32*t2;t3<=min(_PB_N-1,32*t2+31);t3++) {
+    q[t3] = SCALAR_VAL(0.0);;
+  }
+}
+if (_PB_M >= 1) {
+  lbp=0;
+  ubp=floord(_PB_N-1,32);
+#pragma omp parallel for private(lbv,ubv,t3,t4,t5)
+  for (t2=lbp;t2<=ubp;t2++) {
+    for (t3=0;t3<=floord(_PB_M-1,32);t3++) {
+      for (t4=32*t2;t4<=min(_PB_N-1,32*t2+31);t4++) {
+        for (t5=32*t3;t5<=min(_PB_M-1,32*t3+31);t5++) {
+          q[t4] = q[t4] + A[t4][t5] * p[t5];;
+        }
+      }
     }
-#pragma endscop
+  }
+}
+lbp=0;
+ubp=floord(_PB_M-1,32);
+#pragma omp parallel for private(lbv,ubv,t3,t4,t5)
+for (t2=lbp;t2<=ubp;t2++) {
+  for (t3=32*t2;t3<=min(_PB_M-1,32*t2+31);t3++) {
+    s[t3] = 0;;
+  }
+}
+if (_PB_N >= 1) {
+  lbp=0;
+  ubp=floord(_PB_M-1,32);
+#pragma omp parallel for private(lbv,ubv,t3,t4,t5)
+  for (t2=lbp;t2<=ubp;t2++) {
+    for (t3=0;t3<=floord(_PB_N-1,32);t3++) {
+      for (t4=32*t2;t4<=min(_PB_M-1,32*t2+31);t4++) {
+        for (t5=32*t3;t5<=min(_PB_N-1,32*t3+31);t5++) {
+          s[t4] = s[t4] + r[t5] * A[t5][t4];;
+        }
+      }
+    }
+  }
+}
 
 }
 

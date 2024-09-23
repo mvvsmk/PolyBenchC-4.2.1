@@ -1,3 +1,10 @@
+#include <omp.h>
+#include <math.h>
+#define ceild(n,d)  (((n)<0) ? -((-(n))/(d)) : ((n)+(d)-1)/(d))
+#define floord(n,d) (((n)<0) ? -((-(n)+(d)-1)/(d)) : (n)/(d))
+#define max(x,y)    ((x) > (y)? (x) : (y))
+#define min(x,y)    ((x) < (y)? (x) : (y))
+
 /**
  * This version is stamped on May 10, 2016
  *
@@ -68,15 +75,62 @@ void kernel_jacobi_1d(int tsteps,
 {
   int t, i;
 
-#pragma scop
-  for (t = 0; t < _PB_TSTEPS; t++)
-    {
-      for (i = 1; i < _PB_N - 1; i++)
-	B[i] = 0.33333 * (A[i-1] + A[i] + A[i + 1]);
-      for (i = 1; i < _PB_N - 1; i++)
-	A[i] = 0.33333 * (B[i-1] + B[i] + B[i + 1]);
+  int t1, t2, t3, t4, t5;
+ int lb, ub, lbp, ubp, lb2, ub2;
+ register int lbv, ubv;
+if ((_PB_N >= 3) && (_PB_TSTEPS >= 1)) {
+  for (t1=0;t1<=floord(3*_PB_TSTEPS+_PB_N-4,32);t1++) {
+    lbp=max(ceild(2*t1,3),ceild(32*t1-_PB_TSTEPS+1,32));
+    ubp=min(min(floord(2*_PB_TSTEPS+_PB_N-3,32),floord(64*t1+_PB_N+61,96)),t1);
+#pragma omp parallel for private(lbv,ubv,t3,t4,t5)
+    for (t2=lbp;t2<=ubp;t2++) {
+      if (t1 <= floord(96*t2-_PB_N+1,64)) {
+        if ((_PB_N+1)%2 == 0) {
+          A[(_PB_N-2)] = 0.33333 * (B[(_PB_N-2)-1] + B[(_PB_N-2)] + B[(_PB_N-2) + 1]);;
+        }
+      }
+      if (_PB_N == 3) {
+        for (t3=16*t2;t3<=min(min(_PB_TSTEPS-1,16*t2+14),32*t1-32*t2+31);t3++) {
+          B[1] = 0.33333 * (A[1 -1] + A[1] + A[1 + 1]);;
+          A[1] = 0.33333 * (B[1 -1] + B[1] + B[1 + 1]);;
+        }
+      }
+      for (t3=max(ceild(32*t2-_PB_N+2,2),32*t1-32*t2);t3<=min(min(min(floord(32*t2-_PB_N+32,2),_PB_TSTEPS-1),16*t2-1),32*t1-32*t2+31);t3++) {
+        for (t4=32*t2;t4<=2*t3+_PB_N-2;t4++) {
+          B[(-2*t3+t4)] = 0.33333 * (A[(-2*t3+t4)-1] + A[(-2*t3+t4)] + A[(-2*t3+t4) + 1]);;
+          A[(-2*t3+t4-1)] = 0.33333 * (B[(-2*t3+t4-1)-1] + B[(-2*t3+t4-1)] + B[(-2*t3+t4-1) + 1]);;
+        }
+        A[(_PB_N-2)] = 0.33333 * (B[(_PB_N-2)-1] + B[(_PB_N-2)] + B[(_PB_N-2) + 1]);;
+      }
+      for (t3=max(ceild(32*t2-_PB_N+33,2),32*t1-32*t2);t3<=min(min(_PB_TSTEPS-1,16*t2-1),32*t1-32*t2+31);t3++) {
+        for (t4=32*t2;t4<=32*t2+31;t4++) {
+          B[(-2*t3+t4)] = 0.33333 * (A[(-2*t3+t4)-1] + A[(-2*t3+t4)] + A[(-2*t3+t4) + 1]);;
+          A[(-2*t3+t4-1)] = 0.33333 * (B[(-2*t3+t4-1)-1] + B[(-2*t3+t4-1)] + B[(-2*t3+t4-1) + 1]);;
+        }
+      }
+      if (_PB_N >= 4) {
+        for (t3=16*t2;t3<=min(min(floord(32*t2-_PB_N+32,2),_PB_TSTEPS-1),32*t1-32*t2+31);t3++) {
+          B[1] = 0.33333 * (A[1 -1] + A[1] + A[1 + 1]);;
+          for (t4=2*t3+2;t4<=2*t3+_PB_N-2;t4++) {
+            B[(-2*t3+t4)] = 0.33333 * (A[(-2*t3+t4)-1] + A[(-2*t3+t4)] + A[(-2*t3+t4) + 1]);;
+            A[(-2*t3+t4-1)] = 0.33333 * (B[(-2*t3+t4-1)-1] + B[(-2*t3+t4-1)] + B[(-2*t3+t4-1) + 1]);;
+          }
+          A[(_PB_N-2)] = 0.33333 * (B[(_PB_N-2)-1] + B[(_PB_N-2)] + B[(_PB_N-2) + 1]);;
+        }
+      }
+      for (t3=max(ceild(32*t2-_PB_N+33,2),16*t2);t3<=min(min(_PB_TSTEPS-1,16*t2+14),32*t1-32*t2+31);t3++) {
+        B[1] = 0.33333 * (A[1 -1] + A[1] + A[1 + 1]);;
+        for (t4=2*t3+2;t4<=32*t2+31;t4++) {
+          B[(-2*t3+t4)] = 0.33333 * (A[(-2*t3+t4)-1] + A[(-2*t3+t4)] + A[(-2*t3+t4) + 1]);;
+          A[(-2*t3+t4-1)] = 0.33333 * (B[(-2*t3+t4-1)-1] + B[(-2*t3+t4-1)] + B[(-2*t3+t4-1) + 1]);;
+        }
+      }
+      if ((t1 >= ceild(3*t2-1,2)) && (t2 <= floord(_PB_TSTEPS-16,16))) {
+        B[1] = 0.33333 * (A[1 -1] + A[1] + A[1 + 1]);;
+      }
     }
-#pragma endscop
+  }
+}
 
 }
 

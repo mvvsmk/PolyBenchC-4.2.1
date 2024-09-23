@@ -1,3 +1,10 @@
+#include <omp.h>
+#include <math.h>
+#define ceild(n,d)  (((n)<0) ? -((-(n))/(d)) : ((n)+(d)-1)/(d))
+#define floord(n,d) (((n)<0) ? -((-(n)+(d)-1)/(d)) : (n)/(d))
+#define max(x,y)    ((x) > (y)? (x) : (y))
+#define min(x,y)    ((x) < (y)? (x) : (y))
+
 /**
  * This version is stamped on May 10, 2016
  *
@@ -69,18 +76,43 @@ void kernel_doitgen(int nr, int nq, int np,
 {
   int r, q, p, s;
 
-#pragma scop
-  for (r = 0; r < _PB_NR; r++)
-    for (q = 0; q < _PB_NQ; q++)  {
-      for (p = 0; p < _PB_NP; p++)  {
-	sum[p] = SCALAR_VAL(0.0);
-	for (s = 0; s < _PB_NP; s++)
-	  sum[p] += A[r][q][s] * C4[s][p];
+  int t1, t2, t3, t4, t5, t6, t7;
+ int lb, ub, lbp, ubp, lb2, ub2;
+ register int lbv, ubv;
+if ((_PB_NP >= 1) && (_PB_NQ >= 1) && (_PB_NR >= 1)) {
+  for (t1=0;t1<=_PB_NR-1;t1++) {
+    for (t2=0;t2<=_PB_NQ-1;t2++) {
+      lbp=0;
+      ubp=floord(_PB_NP-1,32);
+#pragma omp parallel for private(lbv,ubv,t5,t6,t7)
+      for (t4=lbp;t4<=ubp;t4++) {
+        for (t5=32*t4;t5<=min(_PB_NP-1,32*t4+31);t5++) {
+          sum[t5] = SCALAR_VAL(0.0);;
+        }
       }
-      for (p = 0; p < _PB_NP; p++)
-	A[r][q][p] = sum[p];
+      lbp=0;
+      ubp=floord(_PB_NP-1,32);
+#pragma omp parallel for private(lbv,ubv,t5,t6,t7)
+      for (t4=lbp;t4<=ubp;t4++) {
+        for (t5=0;t5<=floord(_PB_NP-1,32);t5++) {
+          for (t6=32*t4;t6<=min(_PB_NP-1,32*t4+31);t6++) {
+            for (t7=32*t5;t7<=min(_PB_NP-1,32*t5+31);t7++) {
+              sum[t6] += A[t1][t2][t7] * C4[t7][t6];;
+            }
+          }
+        }
+      }
+      lbp=0;
+      ubp=floord(_PB_NP-1,32);
+#pragma omp parallel for private(lbv,ubv,t5,t6,t7)
+      for (t4=lbp;t4<=ubp;t4++) {
+        for (t5=32*t4;t5<=min(_PB_NP-1,32*t4+31);t5++) {
+          A[t1][t2][t5] = sum[t5];;
+        }
+      }
     }
-#pragma endscop
+  }
+}
 
 }
 

@@ -1,3 +1,10 @@
+#include <omp.h>
+#include <math.h>
+#define ceild(n,d)  (((n)<0) ? -((-(n))/(d)) : ((n)+(d)-1)/(d))
+#define floord(n,d) (((n)<0) ? -((-(n)+(d)-1)/(d)) : (n)/(d))
+#define max(x,y)    ((x) > (y)? (x) : (y))
+#define min(x,y)    ((x) < (y)? (x) : (y))
+
 /**
  * This version is stamped on May 10, 2016
  *
@@ -69,28 +76,37 @@ void kernel_durbin(int n,
 
  int i,k;
 
-#pragma scop
- y[0] = -r[0];
- beta = SCALAR_VAL(1.0);
- alpha = -r[0];
-
- for (k = 1; k < _PB_N; k++) {
-   beta = (1-alpha*alpha)*beta;
-   sum = SCALAR_VAL(0.0);
-   for (i=0; i<k; i++) {
-      sum += r[k-i-1]*y[i];
-   }
-   alpha = - (r[k] + sum)/beta;
-
-   for (i=0; i<k; i++) {
-      z[i] = y[i] + alpha*y[k-i-1];
-   }
-   for (i=0; i<k; i++) {
-     y[i] = z[i];
-   }
-   y[k] = alpha;
- }
-#pragma endscop
+  int t1, t2, t3, t4, t5;
+ int lb, ub, lbp, ubp, lb2, ub2;
+ register int lbv, ubv;
+alpha = -r[0];;
+beta = SCALAR_VAL(1.0);;
+y[0] = -r[0];;
+for (t2=1;t2<=_PB_N-1;t2++) {
+  sum = SCALAR_VAL(0.0);;
+  for (t4=0;t4<=t2-1;t4++) {
+    sum += r[t2-t4-1]*y[t4];;
+  }
+  beta = (1-alpha*alpha)*beta;;
+  alpha = - (r[t2] + sum)/beta;;
+  y[t2] = alpha;;
+  lbp=0;
+  ubp=floord(t2-1,32);
+#pragma omp parallel for private(lbv,ubv,t5)
+  for (t4=lbp;t4<=ubp;t4++) {
+    for (t5=32*t4;t5<=min(t2-1,32*t4+31);t5++) {
+      z[t5] = y[t5] + alpha*y[t2-t5-1];;
+    }
+  }
+  lbp=0;
+  ubp=floord(t2-1,32);
+#pragma omp parallel for private(lbv,ubv,t5)
+  for (t4=lbp;t4<=ubp;t4++) {
+    for (t5=32*t4;t5<=min(t2-1,32*t4+31);t5++) {
+      y[t5] = z[t5];;
+    }
+  }
+}
 
 }
 

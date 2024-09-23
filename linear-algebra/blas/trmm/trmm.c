@@ -1,3 +1,10 @@
+#include <omp.h>
+#include <math.h>
+#define ceild(n,d)  (((n)<0) ? -((-(n))/(d)) : ((n)+(d)-1)/(d))
+#define floord(n,d) (((n)<0) ? -((-(n)+(d)-1)/(d)) : (n)/(d))
+#define max(x,y)    ((x) > (y)? (x) : (y))
+#define min(x,y)    ((x) < (y)? (x) : (y))
+
 /**
  * This version is stamped on May 10, 2016
  *
@@ -82,14 +89,41 @@ void kernel_trmm(int m, int n,
 // => Form  B := alpha*A**T*B.
 // A is MxM
 // B is MxN
-#pragma scop
-  for (i = 0; i < _PB_M; i++)
-     for (j = 0; j < _PB_N; j++) {
-        for (k = i+1; k < _PB_M; k++)
-           B[i][j] += A[k][i] * B[k][j];
-        B[i][j] = alpha * B[i][j];
-     }
-#pragma endscop
+  int t1, t2, t3, t4, t5, t6, t7;
+ int lb, ub, lbp, ubp, lb2, ub2;
+ register int lbv, ubv;
+if ((_PB_M >= 1) && (_PB_N >= 1)) {
+  if (_PB_M >= 2) {
+    lbp=0;
+    ubp=floord(_PB_N-1,32);
+#pragma omp parallel for private(lbv,ubv,t3,t4,t5,t6,t7)
+    for (t2=lbp;t2<=ubp;t2++) {
+      for (t3=0;t3<=floord(_PB_M-2,32);t3++) {
+        for (t4=t3;t4<=floord(_PB_M-1,32);t4++) {
+          for (t5=32*t2;t5<=min(_PB_N-1,32*t2+31);t5++) {
+            for (t6=32*t3;t6<=min(min(_PB_M-2,32*t3+31),32*t4+30);t6++) {
+              for (t7=max(32*t4,t6+1);t7<=min(_PB_M-1,32*t4+31);t7++) {
+                B[t6][t5] += A[t7][t6] * B[t7][t5];;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  lbp=0;
+  ubp=floord(_PB_M-1,32);
+#pragma omp parallel for private(lbv,ubv,t3,t4,t5,t6,t7)
+  for (t2=lbp;t2<=ubp;t2++) {
+    for (t3=0;t3<=floord(_PB_N-1,32);t3++) {
+      for (t4=32*t2;t4<=min(_PB_M-1,32*t2+31);t4++) {
+        for (t5=32*t3;t5<=min(_PB_N-1,32*t3+31);t5++) {
+          B[t4][t5] = alpha * B[t4][t5];;
+        }
+      }
+    }
+  }
+}
 
 }
 

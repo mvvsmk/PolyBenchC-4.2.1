@@ -1,3 +1,10 @@
+#include <omp.h>
+#include <math.h>
+#define ceild(n,d)  (((n)<0) ? -((-(n))/(d)) : ((n)+(d)-1)/(d))
+#define floord(n,d) (((n)<0) ? -((-(n)+(d)-1)/(d)) : (n)/(d))
+#define max(x,y)    ((x) > (y)? (x) : (y))
+#define min(x,y)    ((x) < (y)? (x) : (y))
+
 /**
  * This version is stamped on May 10, 2016
  *
@@ -101,38 +108,60 @@ void kernel_ludcmp(int n,
 
   DATA_TYPE w;
 
-#pragma scop
-  for (i = 0; i < _PB_N; i++) {
-    for (j = 0; j <i; j++) {
-       w = A[i][j];
-       for (k = 0; k < j; k++) {
-          w -= A[i][k] * A[k][j];
-       }
-        A[i][j] = w / A[j][j];
+  int t1, t2, t3, t4, t5, t6, t7;
+ int lb, ub, lbp, ubp, lb2, ub2;
+ register int lbv, ubv;
+if (_PB_N >= 1) {
+  for (t4=0;t4<=_PB_N-1;t4++) {
+    w = A[0][t4];;
+    A[0][t4] = w;;
+  }
+  if (_PB_N >= 2) {
+    w = A[1][0];;
+    A[1][0] = w / A[0][0];;
+    for (t4=1;t4<=_PB_N-1;t4++) {
+      w = A[1][t4];;
+      w -= A[1][0] * A[0][t4];;
+      A[1][t4] = w;;
     }
-   for (j = i; j < _PB_N; j++) {
-       w = A[i][j];
-       for (k = 0; k < i; k++) {
-          w -= A[i][k] * A[k][j];
-       }
-       A[i][j] = w;
+  }
+  for (t2=2;t2<=_PB_N-1;t2++) {
+    w = A[t2][0];;
+    A[t2][0] = w / A[0][0];;
+    for (t4=1;t4<=t2-1;t4++) {
+      w = A[t2][t4];;
+      for (t6=0;t6<=t4-1;t6++) {
+        w -= A[t2][t6] * A[t6][t4];;
+      }
+      A[t2][t4] = w / A[t4][t4];;
+    }
+    for (t4=t2;t4<=_PB_N-1;t4++) {
+      w = A[t2][t4];;
+      for (t6=0;t6<=t2-1;t6++) {
+        w -= A[t2][t6] * A[t6][t4];;
+      }
+      A[t2][t4] = w;;
     }
   }
-
-  for (i = 0; i < _PB_N; i++) {
-     w = b[i];
-     for (j = 0; j < i; j++)
-        w -= A[i][j] * y[j];
-     y[i] = w;
+  w = b[0];;
+  y[0] = w;;
+  for (t2=1;t2<=_PB_N-1;t2++) {
+    w = b[t2];;
+    for (t4=0;t4<=t2-1;t4++) {
+      w -= A[t2][t4] * y[t4];;
+    }
+    y[t2] = w;;
   }
-
-   for (i = _PB_N-1; i >=0; i--) {
-     w = y[i];
-     for (j = i+1; j < _PB_N; j++)
-        w -= A[i][j] * x[j];
-     x[i] = w / A[i][i];
+  w = y[(_PB_N-1)];;
+  x[(_PB_N-1)] = w / A[(_PB_N-1)][(_PB_N-1)];;
+  for (t2=-_PB_N+2;t2<=0;t2++) {
+    w = y[-t2];;
+    for (t4=-t2+1;t4<=_PB_N-1;t4++) {
+      w -= A[-t2][t4] * x[t4];;
+    }
+    x[-t2] = w / A[-t2][-t2];;
   }
-#pragma endscop
+}
 
 }
 

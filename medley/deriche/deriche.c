@@ -1,3 +1,10 @@
+#include <omp.h>
+#include <math.h>
+#define ceild(n,d)  (((n)<0) ? -((-(n))/(d)) : ((n)+(d)-1)/(d))
+#define floord(n,d) (((n)<0) ? -((-(n)+(d)-1)/(d)) : (n)/(d))
+#define max(x,y)    ((x) > (y)? (x) : (y))
+#define min(x,y)    ((x) < (y)? (x) : (y))
+
 /**
  * This version is stamped on May 10, 2016
  *
@@ -79,79 +86,131 @@ void kernel_deriche(int w, int h, DATA_TYPE alpha,
     DATA_TYPE a1, a2, a3, a4, a5, a6, a7, a8;
     DATA_TYPE b1, b2, c1, c2;
 
-#pragma scop
-   k = (SCALAR_VAL(1.0)-EXP_FUN(-alpha))*(SCALAR_VAL(1.0)-EXP_FUN(-alpha))/(SCALAR_VAL(1.0)+SCALAR_VAL(2.0)*alpha*EXP_FUN(-alpha)-EXP_FUN(SCALAR_VAL(2.0)*alpha));
-   a1 = a5 = k;
-   a2 = a6 = k*EXP_FUN(-alpha)*(alpha-SCALAR_VAL(1.0));
-   a3 = a7 = k*EXP_FUN(-alpha)*(alpha+SCALAR_VAL(1.0));
-   a4 = a8 = -k*EXP_FUN(SCALAR_VAL(-2.0)*alpha);
-   b1 =  POW_FUN(SCALAR_VAL(2.0),-alpha);
-   b2 = -EXP_FUN(SCALAR_VAL(-2.0)*alpha);
-   c1 = c2 = 1;
-
-   for (i=0; i<_PB_W; i++) {
-        ym1 = SCALAR_VAL(0.0);
-        ym2 = SCALAR_VAL(0.0);
-        xm1 = SCALAR_VAL(0.0);
-        for (j=0; j<_PB_H; j++) {
-            y1[i][j] = a1*imgIn[i][j] + a2*xm1 + b1*ym1 + b2*ym2;
-            xm1 = imgIn[i][j];
-            ym2 = ym1;
-            ym1 = y1[i][j];
-        }
+  int t1, t2, t3, t4, t5, t6, t7, t8;
+ int lb, ub, lbp, ubp, lb2, ub2;
+ register int lbv, ubv;
+k = (SCALAR_VAL(1.0)-EXP_FUN(-alpha))*(SCALAR_VAL(1.0)-EXP_FUN(-alpha))/(SCALAR_VAL(1.0)+SCALAR_VAL(2.0)*alpha*EXP_FUN(-alpha)-EXP_FUN(SCALAR_VAL(2.0)*alpha));;
+a1 = a5 = k;;
+a2 = a6 = k*EXP_FUN(-alpha)*(alpha-SCALAR_VAL(1.0));;
+a3 = a7 = k*EXP_FUN(-alpha)*(alpha+SCALAR_VAL(1.0));;
+a4 = a8 = -k*EXP_FUN(SCALAR_VAL(-2.0)*alpha);;
+b1 = POW_FUN(SCALAR_VAL(2.0),-alpha);;
+b2 = -EXP_FUN(SCALAR_VAL(-2.0)*alpha);;
+c1 = c2 = 1;;
+if (_PB_H >= 1) {
+  for (t2=0;t2<=_PB_W-1;t2++) {
+    ym1 = SCALAR_VAL(0.0);;
+    ym2 = SCALAR_VAL(0.0);;
+    xm1 = SCALAR_VAL(0.0);;
+    for (t4=0;t4<=_PB_H-1;t4++) {
+      y1[t2][t4] = a1*imgIn[t2][t4] + a2*xm1 + b1*ym1 + b2*ym2;;
+      xm1 = imgIn[t2][t4];;
+      ym2 = ym1;;
+      ym1 = y1[t2][t4];;
     }
-
-    for (i=0; i<_PB_W; i++) {
-        yp1 = SCALAR_VAL(0.0);
-        yp2 = SCALAR_VAL(0.0);
-        xp1 = SCALAR_VAL(0.0);
-        xp2 = SCALAR_VAL(0.0);
-        for (j=_PB_H-1; j>=0; j--) {
-            y2[i][j] = a3*xp1 + a4*xp2 + b1*yp1 + b2*yp2;
-            xp2 = xp1;
-            xp1 = imgIn[i][j];
-            yp2 = yp1;
-            yp1 = y2[i][j];
-        }
+  }
+}
+if (_PB_H <= 0) {
+  for (t2=0;t2<=_PB_W-1;t2++) {
+    ym1 = SCALAR_VAL(0.0);;
+    ym2 = SCALAR_VAL(0.0);;
+    xm1 = SCALAR_VAL(0.0);;
+  }
+}
+if (_PB_H >= 1) {
+  for (t2=0;t2<=_PB_W-1;t2++) {
+    yp1 = SCALAR_VAL(0.0);;
+    yp2 = SCALAR_VAL(0.0);;
+    xp1 = SCALAR_VAL(0.0);;
+    xp2 = SCALAR_VAL(0.0);;
+    for (t4=-_PB_H+1;t4<=0;t4++) {
+      y2[t2][-t4] = a3*xp1 + a4*xp2 + b1*yp1 + b2*yp2;;
+      xp2 = xp1;;
+      xp1 = imgIn[t2][-t4];;
+      yp2 = yp1;;
+      yp1 = y2[t2][-t4];;
     }
-
-    for (i=0; i<_PB_W; i++)
-        for (j=0; j<_PB_H; j++) {
-            imgOut[i][j] = c1 * (y1[i][j] + y2[i][j]);
+  }
+}
+if (_PB_H <= 0) {
+  for (t2=0;t2<=_PB_W-1;t2++) {
+    yp1 = SCALAR_VAL(0.0);;
+    yp2 = SCALAR_VAL(0.0);;
+    xp1 = SCALAR_VAL(0.0);;
+    xp2 = SCALAR_VAL(0.0);;
+  }
+}
+if (_PB_H >= 1) {
+  lbp=0;
+  ubp=floord(_PB_W-1,32);
+#pragma omp parallel for private(lbv,ubv,t3,t4,t5,t6,t7,t8)
+  for (t2=lbp;t2<=ubp;t2++) {
+    for (t4=0;t4<=floord(_PB_H-1,32);t4++) {
+      for (t5=32*t2;t5<=min(_PB_W-1,32*t2+31);t5++) {
+        for (t7=32*t4;t7<=min(_PB_H-1,32*t4+31);t7++) {
+          imgOut[t5][t7] = c1 * (y1[t5][t7] + y2[t5][t7]);;
         }
-
-    for (j=0; j<_PB_H; j++) {
-        tm1 = SCALAR_VAL(0.0);
-        ym1 = SCALAR_VAL(0.0);
-        ym2 = SCALAR_VAL(0.0);
-        for (i=0; i<_PB_W; i++) {
-            y1[i][j] = a5*imgOut[i][j] + a6*tm1 + b1*ym1 + b2*ym2;
-            tm1 = imgOut[i][j];
-            ym2 = ym1;
-            ym1 = y1 [i][j];
-        }
+      }
     }
-
-
-    for (j=0; j<_PB_H; j++) {
-        tp1 = SCALAR_VAL(0.0);
-        tp2 = SCALAR_VAL(0.0);
-        yp1 = SCALAR_VAL(0.0);
-        yp2 = SCALAR_VAL(0.0);
-        for (i=_PB_W-1; i>=0; i--) {
-            y2[i][j] = a7*tp1 + a8*tp2 + b1*yp1 + b2*yp2;
-            tp2 = tp1;
-            tp1 = imgOut[i][j];
-            yp2 = yp1;
-            yp1 = y2[i][j];
-        }
+  }
+}
+if (_PB_W >= 1) {
+  for (t2=0;t2<=_PB_H-1;t2++) {
+    tm1 = SCALAR_VAL(0.0);;
+    ym1 = SCALAR_VAL(0.0);;
+    ym2 = SCALAR_VAL(0.0);;
+    for (t4=0;t4<=_PB_W-1;t4++) {
+      y1[t4][t2] = a5*imgOut[t4][t2] + a6*tm1 + b1*ym1 + b2*ym2;;
+      tm1 = imgOut[t4][t2];;
+      ym2 = ym1;;
+      ym1 = y1 [t4][t2];;
     }
-
-    for (i=0; i<_PB_W; i++)
-        for (j=0; j<_PB_H; j++)
-            imgOut[i][j] = c2*(y1[i][j] + y2[i][j]);
-
-#pragma endscop
+  }
+}
+if (_PB_W <= 0) {
+  for (t2=0;t2<=_PB_H-1;t2++) {
+    tm1 = SCALAR_VAL(0.0);;
+    ym1 = SCALAR_VAL(0.0);;
+    ym2 = SCALAR_VAL(0.0);;
+  }
+}
+if (_PB_W >= 1) {
+  for (t2=0;t2<=_PB_H-1;t2++) {
+    tp1 = SCALAR_VAL(0.0);;
+    tp2 = SCALAR_VAL(0.0);;
+    yp1 = SCALAR_VAL(0.0);;
+    yp2 = SCALAR_VAL(0.0);;
+    for (t4=-_PB_W+1;t4<=0;t4++) {
+      y2[-t4][t2] = a7*tp1 + a8*tp2 + b1*yp1 + b2*yp2;;
+      tp2 = tp1;;
+      tp1 = imgOut[-t4][t2];;
+      yp2 = yp1;;
+      yp1 = y2[-t4][t2];;
+    }
+  }
+}
+if (_PB_W <= 0) {
+  for (t2=0;t2<=_PB_H-1;t2++) {
+    tp1 = SCALAR_VAL(0.0);;
+    tp2 = SCALAR_VAL(0.0);;
+    yp1 = SCALAR_VAL(0.0);;
+    yp2 = SCALAR_VAL(0.0);;
+  }
+}
+if (_PB_H >= 1) {
+  lbp=0;
+  ubp=floord(_PB_W-1,32);
+#pragma omp parallel for private(lbv,ubv,t3,t4,t5,t6,t7,t8)
+  for (t2=lbp;t2<=ubp;t2++) {
+    for (t4=0;t4<=floord(_PB_H-1,32);t4++) {
+      for (t5=32*t2;t5<=min(_PB_W-1,32*t2+31);t5++) {
+        for (t7=32*t4;t7<=min(_PB_H-1,32*t4+31);t7++) {
+          imgOut[t5][t7] = c2*(y1[t5][t7] + y2[t5][t7]);;
+        }
+      }
+    }
+  }
+}
 }
 
 

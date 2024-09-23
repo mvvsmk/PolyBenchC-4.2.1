@@ -1,3 +1,10 @@
+#include <omp.h>
+#include <math.h>
+#define ceild(n,d)  (((n)<0) ? -((-(n))/(d)) : ((n)+(d)-1)/(d))
+#define floord(n,d) (((n)<0) ? -((-(n)+(d)-1)/(d)) : (n)/(d))
+#define max(x,y)    ((x) > (y)? (x) : (y))
+#define min(x,y)    ((x) < (y)? (x) : (y))
+
 /**
  * This version is stamped on May 10, 2016
  *
@@ -66,15 +73,25 @@ void kernel_floyd_warshall(int n,
 {
   int i, j, k;
 
-#pragma scop
-  for (k = 0; k < _PB_N; k++)
-    {
-      for(i = 0; i < _PB_N; i++)
-	for (j = 0; j < _PB_N; j++)
-	  path[i][j] = path[i][j] < path[i][k] + path[k][j] ?
-	    path[i][j] : path[i][k] + path[k][j];
+  int t1, t2, t3, t4, t5;
+ int lb, ub, lbp, ubp, lb2, ub2;
+ register int lbv, ubv;
+if (_PB_N >= 1) {
+  for (t1=0;t1<=_PB_N-1;t1++) {
+    for (t2=0;t2<=floord(_PB_N-1,16);t2++) {
+      lbp=max(0,ceild(32*t2-_PB_N+1,32));
+      ubp=min(floord(_PB_N-1,32),t2);
+#pragma omp parallel for private(lbv,ubv,t4,t5)
+      for (t3=lbp;t3<=ubp;t3++) {
+        for (t4=32*t2-32*t3;t4<=min(_PB_N-1,32*t2-32*t3+31);t4++) {
+          for (t5=32*t3;t5<=min(_PB_N-1,32*t3+31);t5++) {
+            path[t4][t5] = path[t4][t5] < path[t4][t1] + path[t1][t5] ? path[t4][t5] : path[t4][t1] + path[t1][t5];;
+          }
+        }
+      }
     }
-#pragma endscop
+  }
+}
 
 }
 

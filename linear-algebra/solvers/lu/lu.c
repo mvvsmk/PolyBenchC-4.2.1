@@ -1,3 +1,10 @@
+#include <omp.h>
+#include <math.h>
+#define ceild(n,d)  (((n)<0) ? -((-(n))/(d)) : ((n)+(d)-1)/(d))
+#define floord(n,d) (((n)<0) ? -((-(n)+(d)-1)/(d)) : (n)/(d))
+#define max(x,y)    ((x) > (y)? (x) : (y))
+#define min(x,y)    ((x) < (y)? (x) : (y))
+
 /**
  * This version is stamped on May 10, 2016
  *
@@ -86,21 +93,99 @@ void kernel_lu(int n,
 {
   int i, j, k;
 
-#pragma scop
-  for (i = 0; i < _PB_N; i++) {
-    for (j = 0; j <i; j++) {
-       for (k = 0; k < j; k++) {
-          A[i][j] -= A[i][k] * A[k][j];
-       }
-        A[i][j] /= A[j][j];
-    }
-   for (j = i; j < _PB_N; j++) {
-       for (k = 0; k < i; k++) {
-          A[i][j] -= A[i][k] * A[k][j];
-       }
+  int t1, t2, t3, t4, t5, t6;
+ int lb, ub, lbp, ubp, lb2, ub2;
+ register int lbv, ubv;
+if (_PB_N >= 2) {
+  for (t1=0;t1<=floord(_PB_N-1,16);t1++) {
+    lbp=max(0,ceild(32*t1-_PB_N+1,32));
+    ubp=min(floord(_PB_N-1,32),t1);
+#pragma omp parallel for private(lbv,ubv,t3,t4,t5,t6)
+    for (t2=lbp;t2<=ubp;t2++) {
+      for (t3=0;t3<=min(min(floord(_PB_N-2,32),t2),t1-t2);t3++) {
+        if (t2 == t3) {
+          for (t4=max(32*t1-32*t2,32*t2+32);t4<=min(_PB_N-1,32*t1-32*t2+31);t4++) {
+            A[t4][32*t2] /= A[32*t2][32*t2];;
+            for (t5=32*t2+1;t5<=32*t2+31;t5++) {
+              for (t6=32*t2;t6<=t5-1;t6++) {
+                A[t4][t5] -= A[t4][t6] * A[t6][t5];;
+              }
+              A[t4][t5] /= A[t5][t5];;
+            }
+          }
+        }
+        if (t2 >= t3+1) {
+          for (t4=max(32*t1-32*t2,32*t2+32);t4<=min(_PB_N-1,32*t1-32*t2+31);t4++) {
+            for (t5=32*t2;t5<=32*t2+31;t5++) {
+              for (t6=32*t3;t6<=32*t3+31;t6++) {
+                A[t4][t5] -= A[t4][t6] * A[t6][t5];;
+              }
+            }
+          }
+        }
+        if ((t1 == 2*t2) && (t1 == 2*t3)) {
+          if (t1%2 == 0) {
+            A[(16*t1+1)][16*t1] /= A[16*t1][16*t1];;
+          }
+          for (t5=16*t1+1;t5<=min(_PB_N-1,16*t1+31);t5++) {
+            if (t1%2 == 0) {
+              A[(16*t1+1)][t5] -= A[(16*t1+1)][16*t1] * A[16*t1][t5];;
+            }
+          }
+        }
+        for (t4=max(32*t1-32*t2,32*t3+1);t4<=min(32*t2,32*t1-32*t2+31);t4++) {
+          for (t5=32*t2;t5<=min(_PB_N-1,32*t2+31);t5++) {
+            for (t6=32*t3;t6<=min(32*t3+31,t4-1);t6++) {
+              A[t4][t5] -= A[t4][t6] * A[t6][t5];;
+            }
+          }
+        }
+        if ((t1 == 2*t2) && (t1 == 2*t3)) {
+          for (t4=16*t1+2;t4<=min(_PB_N-1,16*t1+31);t4++) {
+            if (t1%2 == 0) {
+              A[t4][16*t1] /= A[16*t1][16*t1];;
+            }
+            for (t5=16*t1+1;t5<=t4-1;t5++) {
+              for (t6=16*t1;t6<=t5-1;t6++) {
+                if (t1%2 == 0) {
+                  A[t4][t5] -= A[t4][t6] * A[t6][t5];;
+                }
+              }
+              if (t1%2 == 0) {
+                A[t4][t5] /= A[t5][t5];;
+              }
+            }
+            for (t5=t4;t5<=min(_PB_N-1,16*t1+31);t5++) {
+              for (t6=16*t1;t6<=t4-1;t6++) {
+                if (t1%2 == 0) {
+                  A[t4][t5] -= A[t4][t6] * A[t6][t5];;
+                }
+              }
+            }
+          }
+        }
+        if ((t1 == 2*t2) && (t1 >= 2*t3+2)) {
+          for (t4=16*t1+1;t4<=min(_PB_N-1,16*t1+31);t4++) {
+            for (t5=16*t1;t5<=t4-1;t5++) {
+              for (t6=32*t3;t6<=32*t3+31;t6++) {
+                if (t1%2 == 0) {
+                  A[t4][t5] -= A[t4][t6] * A[t6][t5];;
+                }
+              }
+            }
+            for (t5=t4;t5<=min(_PB_N-1,16*t1+31);t5++) {
+              for (t6=32*t3;t6<=32*t3+31;t6++) {
+                if (t1%2 == 0) {
+                  A[t4][t5] -= A[t4][t6] * A[t6][t5];;
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
-#pragma endscop
+}
 }
 
 

@@ -1,3 +1,10 @@
+#include <omp.h>
+#include <math.h>
+#define ceild(n,d)  (((n)<0) ? -((-(n))/(d)) : ((n)+(d)-1)/(d))
+#define floord(n,d) (((n)<0) ? -((-(n)+(d)-1)/(d)) : (n)/(d))
+#define max(x,y)    ((x) > (y)? (x) : (y))
+#define min(x,y)    ((x) < (y)? (x) : (y))
+
 /**
  * This version is stamped on May 10, 2016
  *
@@ -79,16 +86,41 @@ void kernel_syrk(int n, int m,
 // =>  Form  C := alpha*A*A**T + beta*C.
 //A is NxM
 //C is NxN
-#pragma scop
-  for (i = 0; i < _PB_N; i++) {
-    for (j = 0; j <= i; j++)
-      C[i][j] *= beta;
-    for (k = 0; k < _PB_M; k++) {
-      for (j = 0; j <= i; j++)
-        C[i][j] += alpha * A[i][k] * A[j][k];
+  int t1, t2, t3, t4, t5, t6, t7;
+ int lb, ub, lbp, ubp, lb2, ub2;
+ register int lbv, ubv;
+if (_PB_N >= 1) {
+  lbp=0;
+  ubp=floord(_PB_N-1,32);
+#pragma omp parallel for private(lbv,ubv,t3,t4,t5,t6,t7)
+  for (t2=lbp;t2<=ubp;t2++) {
+    for (t3=0;t3<=t2;t3++) {
+      for (t4=32*t2;t4<=min(_PB_N-1,32*t2+31);t4++) {
+        for (t5=32*t3;t5<=min(t4,32*t3+31);t5++) {
+          C[t4][t5] *= beta;;
+        }
+      }
     }
   }
-#pragma endscop
+  if (_PB_M >= 1) {
+    lbp=0;
+    ubp=floord(_PB_N-1,32);
+#pragma omp parallel for private(lbv,ubv,t3,t4,t5,t6,t7)
+    for (t2=lbp;t2<=ubp;t2++) {
+      for (t3=0;t3<=t2;t3++) {
+        for (t4=0;t4<=floord(_PB_M-1,32);t4++) {
+          for (t5=32*t2;t5<=min(_PB_N-1,32*t2+31);t5++) {
+            for (t6=32*t3;t6<=min(t5,32*t3+31);t6++) {
+              for (t7=32*t4;t7<=min(_PB_M-1,32*t4+31);t7++) {
+                C[t5][t6] += alpha * A[t5][t7] * A[t6][t7];;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
 
 }
 

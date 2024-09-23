@@ -1,3 +1,10 @@
+#include <omp.h>
+#include <math.h>
+#define ceild(n,d)  (((n)<0) ? -((-(n))/(d)) : ((n)+(d)-1)/(d))
+#define floord(n,d) (((n)<0) ? -((-(n)+(d)-1)/(d)) : (n)/(d))
+#define max(x,y)    ((x) > (y)? (x) : (y))
+#define min(x,y)    ((x) < (y)? (x) : (y))
+
 /**
  * This version is stamped on May 10, 2016
  *
@@ -97,25 +104,185 @@ void kernel_fdtd_2d(int tmax,
 {
   int t, i, j;
 
-#pragma scop
-
-  for(t = 0; t < _PB_TMAX; t++)
-    {
-      for (j = 0; j < _PB_NY; j++)
-	ey[0][j] = _fict_[t];
-      for (i = 1; i < _PB_NX; i++)
-	for (j = 0; j < _PB_NY; j++)
-	  ey[i][j] = ey[i][j] - SCALAR_VAL(0.5)*(hz[i][j]-hz[i-1][j]);
-      for (i = 0; i < _PB_NX; i++)
-	for (j = 1; j < _PB_NY; j++)
-	  ex[i][j] = ex[i][j] - SCALAR_VAL(0.5)*(hz[i][j]-hz[i][j-1]);
-      for (i = 0; i < _PB_NX - 1; i++)
-	for (j = 0; j < _PB_NY - 1; j++)
-	  hz[i][j] = hz[i][j] - SCALAR_VAL(0.7)*  (ex[i][j+1] - ex[i][j] +
-				       ey[i+1][j] - ey[i][j]);
+  int t1, t2, t3, t4, t5, t6;
+ int lb, ub, lbp, ubp, lb2, ub2;
+ register int lbv, ubv;
+if ((_PB_NY >= 1) && (_PB_TMAX >= 1)) {
+  for (t1=0;t1<=floord(2*_PB_TMAX+_PB_NY-3,32);t1++) {
+    lbp=max(ceild(t1,2),ceild(32*t1-_PB_TMAX+1,32));
+    ubp=min(min(floord(_PB_TMAX+_PB_NY-2,32),floord(32*t1+_PB_NY+30,64)),t1);
+#pragma omp parallel for private(lbv,ubv,t3,t4,t5,t6)
+    for (t2=lbp;t2<=ubp;t2++) {
+      for (t3=t1-t2;t3<=min(min(floord(32*t1-32*t2+31*_PB_NX,32),floord(32*t1-32*t2+_PB_NX+30,32)),floord(32*t1-32*t2+30*_PB_TMAX+31*_PB_NX-30,992));t3++) {
+        if ((_PB_NX >= 2) && (_PB_NY >= 2) && (t1 == 2*t2) && (t1 == 2*t3)) {
+          for (t4=16*t1;t4<=min(_PB_TMAX-1,16*t1+30);t4++) {
+            if (t1%2 == 0) {
+              ey[0][0] = _fict_[t4];;
+            }
+            for (t6=t4+1;t6<=min(16*t1+31,t4+_PB_NX-1);t6++) {
+              if (t1%2 == 0) {
+                ey[(-t4+t6)][0] = ey[(-t4+t6)][0] - SCALAR_VAL(0.5)*(hz[(-t4+t6)][0]-hz[(-t4+t6)-1][0]);;
+              }
+            }
+            for (t5=t4+1;t5<=min(16*t1+31,t4+_PB_NY-1);t5++) {
+              if (t1%2 == 0) {
+                ex[0][(-t4+t5)] = ex[0][(-t4+t5)] - SCALAR_VAL(0.5)*(hz[0][(-t4+t5)]-hz[0][(-t4+t5)-1]);;
+              }
+              if (t1%2 == 0) {
+                ey[0][(-t4+t5)] = _fict_[t4];;
+              }
+              for (t6=t4+1;t6<=min(16*t1+31,t4+_PB_NX-1);t6++) {
+                if (t1%2 == 0) {
+                  ey[(-t4+t6)][(-t4+t5)] = ey[(-t4+t6)][(-t4+t5)] - SCALAR_VAL(0.5)*(hz[(-t4+t6)][(-t4+t5)]-hz[(-t4+t6)-1][(-t4+t5)]);;
+                }
+                if (t1%2 == 0) {
+                  ex[(-t4+t6)][(-t4+t5)] = ex[(-t4+t6)][(-t4+t5)] - SCALAR_VAL(0.5)*(hz[(-t4+t6)][(-t4+t5)]-hz[(-t4+t6)][(-t4+t5)-1]);;
+                }
+                if (t1%2 == 0) {
+                  hz[(-t4+t6-1)][(-t4+t5-1)] = hz[(-t4+t6-1)][(-t4+t5-1)] - SCALAR_VAL(0.7)* (ex[(-t4+t6-1)][(-t4+t5-1)+1] - ex[(-t4+t6-1)][(-t4+t5-1)] + ey[(-t4+t6-1)+1][(-t4+t5-1)] - ey[(-t4+t6-1)][(-t4+t5-1)]);;
+                }
+              }
+            }
+          }
+        }
+        if ((_PB_NX >= 2) && (t1 == t2+t3) && (t1 <= 2*t2-1)) {
+          for (t4=max(32*t1-32*t2,32*t2-_PB_NY+1);t4<=min(_PB_TMAX-1,32*t1-32*t2+30);t4++) {
+            for (t5=32*t2;t5<=min(32*t2+31,t4+_PB_NY-1);t5++) {
+              ex[0][(-t4+t5)] = ex[0][(-t4+t5)] - SCALAR_VAL(0.5)*(hz[0][(-t4+t5)]-hz[0][(-t4+t5)-1]);;
+              ey[0][(-t4+t5)] = _fict_[t4];;
+              for (t6=t4+1;t6<=min(32*t1-32*t2+31,t4+_PB_NX-1);t6++) {
+                ey[(-t4+t6)][(-t4+t5)] = ey[(-t4+t6)][(-t4+t5)] - SCALAR_VAL(0.5)*(hz[(-t4+t6)][(-t4+t5)]-hz[(-t4+t6)-1][(-t4+t5)]);;
+                ex[(-t4+t6)][(-t4+t5)] = ex[(-t4+t6)][(-t4+t5)] - SCALAR_VAL(0.5)*(hz[(-t4+t6)][(-t4+t5)]-hz[(-t4+t6)][(-t4+t5)-1]);;
+                hz[(-t4+t6-1)][(-t4+t5-1)] = hz[(-t4+t6-1)][(-t4+t5-1)] - SCALAR_VAL(0.7)* (ex[(-t4+t6-1)][(-t4+t5-1)+1] - ex[(-t4+t6-1)][(-t4+t5-1)] + ey[(-t4+t6-1)+1][(-t4+t5-1)] - ey[(-t4+t6-1)][(-t4+t5-1)]);;
+              }
+            }
+          }
+        }
+        if ((_PB_NX >= 2) && (_PB_NY == 1) && (t1 == 2*t2) && (t1 == 2*t3)) {
+          for (t4=16*t1;t4<=min(_PB_TMAX-1,16*t1+30);t4++) {
+            if (t1%2 == 0) {
+              ey[0][0] = _fict_[t4];;
+            }
+            for (t6=t4+1;t6<=min(16*t1+31,t4+_PB_NX-1);t6++) {
+              if (t1%2 == 0) {
+                ey[(-t4+t6)][0] = ey[(-t4+t6)][0] - SCALAR_VAL(0.5)*(hz[(-t4+t6)][0]-hz[(-t4+t6)-1][0]);;
+              }
+            }
+          }
+        }
+        if ((_PB_NX == 1) && (_PB_NY >= 2) && (t1 == 2*t2) && (t1 == 2*t3)) {
+          for (t4=16*t1;t4<=min(_PB_TMAX-1,16*t1+30);t4++) {
+            if (t1%2 == 0) {
+              ey[0][0] = _fict_[t4];;
+            }
+            for (t5=t4+1;t5<=min(16*t1+31,t4+_PB_NY-1);t5++) {
+              if (t1%2 == 0) {
+                ex[0][(-t4+t5)] = ex[0][(-t4+t5)] - SCALAR_VAL(0.5)*(hz[0][(-t4+t5)]-hz[0][(-t4+t5)-1]);;
+              }
+              if (t1%2 == 0) {
+                ey[0][(-t4+t5)] = _fict_[t4];;
+              }
+            }
+          }
+        }
+        if ((_PB_NX == 1) && (t1 == t2+t3) && (t1 <= 2*t2-1)) {
+          for (t4=max(32*t1-32*t2,32*t2-_PB_NY+1);t4<=min(_PB_TMAX-1,32*t1-32*t2+31);t4++) {
+            for (t5=32*t2;t5<=min(32*t2+31,t4+_PB_NY-1);t5++) {
+              ex[0][(-t4+t5)] = ex[0][(-t4+t5)] - SCALAR_VAL(0.5)*(hz[0][(-t4+t5)]-hz[0][(-t4+t5)-1]);;
+              ey[0][(-t4+t5)] = _fict_[t4];;
+            }
+          }
+        }
+        if ((_PB_NX <= 1) && (_PB_NY == 1) && (t1 == 2*t2) && (t1 == 2*t3)) {
+          for (t4=16*t1;t4<=min(_PB_TMAX-1,16*t1+31);t4++) {
+            if (t1%2 == 0) {
+              ey[0][0] = _fict_[t4];;
+            }
+          }
+        }
+        if ((_PB_NX == 0) && (_PB_NY >= 2) && (t1 == t2+t3)) {
+          for (t4=max(32*t1-32*t2,32*t2-_PB_NY+1);t4<=min(_PB_TMAX-1,32*t1-32*t2+31);t4++) {
+            for (t5=max(32*t2,t4);t5<=min(32*t2+31,t4+_PB_NY-1);t5++) {
+              ey[0][(-t4+t5)] = _fict_[t4];;
+            }
+          }
+        }
+        if ((_PB_NX == 1) && (_PB_NY >= 2) && (t1 == 2*t2) && (t1 == 2*t3) && (t1 <= floord(_PB_TMAX-32,16))) {
+          if (t1%2 == 0) {
+            ey[0][0] = _fict_[(16*t1+31)];;
+          }
+        }
+        if ((_PB_NX >= 2) && (t1 == t2+t3) && (t1 <= min(floord(32*t2+_PB_TMAX-32,32),2*t2-1))) {
+          for (t5=32*t2;t5<=min(32*t2+31,32*t1-32*t2+_PB_NY+30);t5++) {
+            ex[0][(-32*t1+32*t2+t5-31)] = ex[0][(-32*t1+32*t2+t5-31)] - SCALAR_VAL(0.5)*(hz[0][(-32*t1+32*t2+t5-31)]-hz[0][(-32*t1+32*t2+t5-31)-1]);;
+            ey[0][(-32*t1+32*t2+t5-31)] = _fict_[(32*t1-32*t2+31)];;
+          }
+        }
+        if ((_PB_NX >= 2) && (t1 == 2*t2) && (t1 == 2*t3) && (t1 <= floord(_PB_TMAX-32,16))) {
+          if (t1%2 == 0) {
+            ey[0][0] = _fict_[(16*t1+31)];;
+          }
+        }
+        if ((_PB_NY >= 2) && (t1 == 2*t2) && (t1 <= 2*t3-2)) {
+          for (t4=max(16*t1,32*t3-_PB_NX+1);t4<=min(_PB_TMAX-1,16*t1+30);t4++) {
+            for (t6=32*t3;t6<=min(32*t3+31,t4+_PB_NX-1);t6++) {
+              if (t1%2 == 0) {
+                ey[(-t4+t6)][0] = ey[(-t4+t6)][0] - SCALAR_VAL(0.5)*(hz[(-t4+t6)][0]-hz[(-t4+t6)-1][0]);;
+              }
+            }
+            for (t5=t4+1;t5<=min(16*t1+31,t4+_PB_NY-1);t5++) {
+              for (t6=32*t3;t6<=min(32*t3+31,t4+_PB_NX-1);t6++) {
+                if (t1%2 == 0) {
+                  ey[(-t4+t6)][(-t4+t5)] = ey[(-t4+t6)][(-t4+t5)] - SCALAR_VAL(0.5)*(hz[(-t4+t6)][(-t4+t5)]-hz[(-t4+t6)-1][(-t4+t5)]);;
+                }
+                if (t1%2 == 0) {
+                  ex[(-t4+t6)][(-t4+t5)] = ex[(-t4+t6)][(-t4+t5)] - SCALAR_VAL(0.5)*(hz[(-t4+t6)][(-t4+t5)]-hz[(-t4+t6)][(-t4+t5)-1]);;
+                }
+                if (t1%2 == 0) {
+                  hz[(-t4+t6-1)][(-t4+t5-1)] = hz[(-t4+t6-1)][(-t4+t5-1)] - SCALAR_VAL(0.7)* (ex[(-t4+t6-1)][(-t4+t5-1)+1] - ex[(-t4+t6-1)][(-t4+t5-1)] + ey[(-t4+t6-1)+1][(-t4+t5-1)] - ey[(-t4+t6-1)][(-t4+t5-1)]);;
+                }
+              }
+            }
+          }
+        }
+        if (t1 <= min(2*t2-1,t2+t3-1)) {
+          for (t4=max(max(32*t1-32*t2,32*t2-_PB_NY+1),32*t3-_PB_NX+1);t4<=min(_PB_TMAX-1,32*t1-32*t2+31);t4++) {
+            for (t5=32*t2;t5<=min(32*t2+31,t4+_PB_NY-1);t5++) {
+              for (t6=32*t3;t6<=min(32*t3+31,t4+_PB_NX-1);t6++) {
+                ey[(-t4+t6)][(-t4+t5)] = ey[(-t4+t6)][(-t4+t5)] - SCALAR_VAL(0.5)*(hz[(-t4+t6)][(-t4+t5)]-hz[(-t4+t6)-1][(-t4+t5)]);;
+                ex[(-t4+t6)][(-t4+t5)] = ex[(-t4+t6)][(-t4+t5)] - SCALAR_VAL(0.5)*(hz[(-t4+t6)][(-t4+t5)]-hz[(-t4+t6)][(-t4+t5)-1]);;
+                hz[(-t4+t6-1)][(-t4+t5-1)] = hz[(-t4+t6-1)][(-t4+t5-1)] - SCALAR_VAL(0.7)* (ex[(-t4+t6-1)][(-t4+t5-1)+1] - ex[(-t4+t6-1)][(-t4+t5-1)] + ey[(-t4+t6-1)+1][(-t4+t5-1)] - ey[(-t4+t6-1)][(-t4+t5-1)]);;
+              }
+            }
+          }
+        }
+        if ((_PB_NY == 1) && (t1 == 2*t2) && (t1 <= 2*t3-2)) {
+          for (t4=max(16*t1,32*t3-_PB_NX+1);t4<=min(_PB_TMAX-1,16*t1+31);t4++) {
+            for (t6=32*t3;t6<=min(32*t3+31,t4+_PB_NX-1);t6++) {
+              if (t1%2 == 0) {
+                ey[(-t4+t6)][0] = ey[(-t4+t6)][0] - SCALAR_VAL(0.5)*(hz[(-t4+t6)][0]-hz[(-t4+t6)-1][0]);;
+              }
+            }
+          }
+        }
+        if ((_PB_NY >= 2) && (t1 == 2*t2) && (t1 <= min(floord(_PB_TMAX-32,16),2*t3-2))) {
+          for (t6=32*t3;t6<=min(32*t3+31,16*t1+_PB_NX+30);t6++) {
+            if (t1%2 == 0) {
+              ey[(-16*t1+t6-31)][0] = ey[(-16*t1+t6-31)][0] - SCALAR_VAL(0.5)*(hz[(-16*t1+t6-31)][0]-hz[(-16*t1+t6-31)-1][0]);;
+            }
+          }
+        }
+      }
+      if (_PB_NX <= -1) {
+        for (t4=max(32*t1-32*t2,32*t2-_PB_NY+1);t4<=min(_PB_TMAX-1,32*t1-32*t2+31);t4++) {
+          for (t5=max(32*t2,t4);t5<=min(32*t2+31,t4+_PB_NY-1);t5++) {
+            ey[0][(-t4+t5)] = _fict_[t4];;
+          }
+        }
+      }
     }
-
-#pragma endscop
+  }
+}
 }
 
 

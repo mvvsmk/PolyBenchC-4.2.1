@@ -1,3 +1,10 @@
+#include <omp.h>
+#include <math.h>
+#define ceild(n,d)  (((n)<0) ? -((-(n))/(d)) : ((n)+(d)-1)/(d))
+#define floord(n,d) (((n)<0) ? -((-(n)+(d)-1)/(d)) : (n)/(d))
+#define max(x,y)    ((x) > (y)? (x) : (y))
+#define min(x,y)    ((x) < (y)? (x) : (y))
+
 /**
  * This version is stamped on May 10, 2016
  *
@@ -70,15 +77,50 @@ void kernel_trisolv(int n,
 {
   int i, j;
 
-#pragma scop
-  for (i = 0; i < _PB_N; i++)
-    {
-      x[i] = b[i];
-      for (j = 0; j <i; j++)
-        x[i] -= L[i][j] * x[j];
-      x[i] = x[i] / L[i][i];
+  int t1, t2, t3, t4, t5;
+ int lb, ub, lbp, ubp, lb2, ub2;
+ register int lbv, ubv;
+if (_PB_N >= 1) {
+  lbp=0;
+  ubp=floord(_PB_N-1,32);
+#pragma omp parallel for private(lbv,ubv,t3,t4,t5)
+  for (t2=lbp;t2<=ubp;t2++) {
+    for (t3=32*t2;t3<=min(_PB_N-1,32*t2+31);t3++) {
+      x[t3] = b[t3];;
     }
-#pragma endscop
+  }
+  for (t2=0;t2<=floord(_PB_N-1,16);t2++) {
+    lbp=max(0,ceild(32*t2-_PB_N+1,32));
+    ubp=floord(t2,2);
+#pragma omp parallel for private(lbv,ubv,t4,t5)
+    for (t3=lbp;t3<=ubp;t3++) {
+      if (t2 >= 2*t3+1) {
+        for (t4=32*t2-32*t3;t4<=min(_PB_N-1,32*t2-32*t3+31);t4++) {
+          for (t5=32*t3;t5<=32*t3+31;t5++) {
+            x[t4] -= L[t4][t5] * x[t5];;
+          }
+        }
+      }
+      if (t2 == 2*t3) {
+        if (t2%2 == 0) {
+          x[16*t2] = x[16*t2] / L[16*t2][16*t2];;
+        }
+      }
+      if (t2 == 2*t3) {
+        for (t4=16*t2+1;t4<=min(_PB_N-1,16*t2+31);t4++) {
+          for (t5=16*t2;t5<=t4-1;t5++) {
+            if (t2%2 == 0) {
+              x[t4] -= L[t4][t5] * x[t5];;
+            }
+          }
+          if (t2%2 == 0) {
+            x[t4] = x[t4] / L[t4][t4];;
+          }
+        }
+      }
+    }
+  }
+}
 
 }
 

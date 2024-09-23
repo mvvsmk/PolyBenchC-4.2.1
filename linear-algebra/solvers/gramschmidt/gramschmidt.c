@@ -1,3 +1,10 @@
+#include <omp.h>
+#include <math.h>
+#define ceild(n,d)  (((n)<0) ? -((-(n))/(d)) : ((n)+(d)-1)/(d))
+#define floord(n,d) (((n)<0) ? -((-(n)+(d)-1)/(d)) : (n)/(d))
+#define max(x,y)    ((x) > (y)? (x) : (y))
+#define min(x,y)    ((x) < (y)? (x) : (y))
+
 /**
  * This version is stamped on May 10, 2016
  *
@@ -85,25 +92,66 @@ void kernel_gramschmidt(int m, int n,
 
   DATA_TYPE nrm;
 
-#pragma scop
-  for (k = 0; k < _PB_N; k++)
-    {
-      nrm = SCALAR_VAL(0.0);
-      for (i = 0; i < _PB_M; i++)
-        nrm += A[i][k] * A[i][k];
-      R[k][k] = SQRT_FUN(nrm);
-      for (i = 0; i < _PB_M; i++)
-        Q[i][k] = A[i][k] / R[k][k];
-      for (j = k + 1; j < _PB_N; j++)
-	{
-	  R[k][j] = SCALAR_VAL(0.0);
-	  for (i = 0; i < _PB_M; i++)
-	    R[k][j] += Q[i][k] * A[i][j];
-	  for (i = 0; i < _PB_M; i++)
-	    A[i][j] = A[i][j] - Q[i][k] * R[k][j];
-	}
+  int t1, t2, t3, t4, t5, t6, t7, t8;
+ int lb, ub, lbp, ubp, lb2, ub2;
+ register int lbv, ubv;
+if (_PB_N >= 1) {
+  lbp=0;
+  ubp=floord(_PB_N-2,32);
+#pragma omp parallel for private(lbv,ubv,t3,t4,t5,t6,t7,t8)
+  for (t2=lbp;t2<=ubp;t2++) {
+    for (t4=t2;t4<=floord(_PB_N-1,32);t4++) {
+      for (t5=32*t2;t5<=min(min(_PB_N-2,32*t2+31),32*t4+30);t5++) {
+        for (t7=max(32*t4,t5+1);t7<=min(_PB_N-1,32*t4+31);t7++) {
+          R[t5][t7] = SCALAR_VAL(0.0);;
+        }
+      }
     }
-#pragma endscop
+  }
+  for (t2=0;t2<=_PB_N-1;t2++) {
+    nrm = SCALAR_VAL(0.0);;
+    for (t4=0;t4<=_PB_M-1;t4++) {
+      nrm += A[t4][t2] * A[t4][t2];;
+    }
+    R[t2][t2] = SQRT_FUN(nrm);;
+    lbp=0;
+    ubp=floord(_PB_M-1,32);
+#pragma omp parallel for private(lbv,ubv,t5,t6,t7,t8)
+    for (t4=lbp;t4<=ubp;t4++) {
+      for (t5=32*t4;t5<=min(_PB_M-1,32*t4+31);t5++) {
+        Q[t5][t2] = A[t5][t2] / R[t2][t2];;
+      }
+    }
+    if ((_PB_M >= 1) && (t2 <= _PB_N-2)) {
+      lbp=ceild(t2-30,32);
+      ubp=floord(_PB_N-1,32);
+#pragma omp parallel for private(lbv,ubv,t5,t6,t7,t8)
+      for (t4=lbp;t4<=ubp;t4++) {
+        for (t5=0;t5<=floord(_PB_M-1,32);t5++) {
+          for (t6=max(32*t4,t2+1);t6<=min(_PB_N-1,32*t4+31);t6++) {
+            for (t7=32*t5;t7<=min(_PB_M-1,32*t5+31);t7++) {
+              R[t2][t6] += Q[t7][t2] * A[t7][t6];;
+            }
+          }
+        }
+      }
+    }
+    if ((_PB_M >= 1) && (t2 <= _PB_N-2)) {
+      lbp=ceild(t2-30,32);
+      ubp=floord(_PB_N-1,32);
+#pragma omp parallel for private(lbv,ubv,t5,t6,t7,t8)
+      for (t4=lbp;t4<=ubp;t4++) {
+        for (t5=0;t5<=floord(_PB_M-1,32);t5++) {
+          for (t6=max(32*t4,t2+1);t6<=min(_PB_N-1,32*t4+31);t6++) {
+            for (t7=32*t5;t7<=min(_PB_M-1,32*t5+31);t7++) {
+              A[t7][t6] = A[t7][t6] - Q[t7][t2] * R[t2][t6];;
+            }
+          }
+        }
+      }
+    }
+  }
+}
 
 }
 
